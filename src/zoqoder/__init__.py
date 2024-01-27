@@ -14,3 +14,5 @@ except PackageNotFoundError:  # pragma: no cover
     __version__ = "unknown"
 finally:
     del version, PackageNotFoundError
+
+from zoqoder.zoqoder import zotero_connect, all_annotations, item_parent, has_parent, root_item, item_by_key

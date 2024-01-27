@@ -23,7 +23,7 @@ References:
 import logging
 
 import pandas as pd
-import pyzotero
+from pyzotero.zotero import Zotero
 
 from zoqoder import __version__
 
@@ -32,6 +32,29 @@ __copyright__ = "Julian Irwin"
 __license__ = "MIT"
 
 _logger = logging.getLogger(__name__)
+
+
+def zotero_connect(api_key, library_id, library_type):
+    return Zotero(library_id=library_id, library_type=library_type, api_key=api_key)
+
+
+def all_annotations(zotero):
+    return zotero.everything(zotero.items(itemType="annotation"))
+
+
+def root_item(zotero, item):
+    if has_parent(item):
+        return root_item(zotero, item_parent(zotero, item))
+    else:
+        return item
+
+
+def has_parent(item):
+    return item["data"].get("parentItem", None) is not None
+
+
+def item_parent(zotero, item):
+    return item_by_key(zotero, item["data"]["parentItem"])
 
 
 def memoize(func):
@@ -46,18 +69,11 @@ def memoize(func):
 
     return memoized_func
 
-def zotero_connect(api_key, library_id, library_type):
-    return pyzotero.zotero.Zotero(library_id=library_id, library_type=library_type, api_key=api_key)
-
-def all_annotations(zotero):
-    return zotero.everything(zotero.items(itemType="annotation"))
-
-def annotation_parent_item(zotero, annotation):
-    return item_by_key(zotero, annotation["data"]["parentItem"])
 
 @memoize
 def item_by_key(zotero, key):
     return zotero.items(itemKey=key)
+
 
 # if __name__ == "__main__":
 #     zotero = zotero_connect(api_key, library_id, library_type)
