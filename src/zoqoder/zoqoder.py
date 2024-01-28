@@ -24,6 +24,10 @@ import logging
 
 import pandas as pd
 from pyzotero.zotero import Zotero
+from itertools import chain
+from functools import cache
+from collections import defaultdict
+from copy import deepcopy
 
 from zoqoder import __version__
 
@@ -38,13 +42,128 @@ def zotero_connect(api_key, library_id, library_type):
     return Zotero(library_id=library_id, library_type=library_type, api_key=api_key)
 
 
-def all_annotations(zotero):
-    return zotero.everything(zotero.items(itemType="annotation"))
+DEFAULT_ANNOTATION_FIELDS = (
+    "annotationText",
+    "annotationComment",
+    "annotationColor",
+    "tags",
+)
 
 
-def root_item(zotero, item):
+DEFAULT_DOCUMENT_FIELDS = (
+    "key",
+    "date",
+    "creatorSummary",
+    "title",
+    "publicationTitle",
+)
+
+
+def tabulate_coding_summary_dataframe(
+    zotero,
+    annotation_items,
+    document_fields=DEFAULT_DOCUMENT_FIELDS,
+    annotation_fields=DEFAULT_ANNOTATION_FIELDS,
+):
+    table = tabulate_coding_summary(zotero, annotation_items, document_fields, annotation_fields)    
+    return pd.DataFrame(table)
+
+def tabulate_coding_summary(
+    zotero,
+    annotation_items,
+    document_fields=DEFAULT_DOCUMENT_FIELDS,
+    annotation_fields=DEFAULT_ANNOTATION_FIELDS,
+):
+    table = []
+    key_table = tabulate_coding_summary_by_key(zotero, annotation_items)
+    unique_tags = items_unique_tags(annotation_items)
+    for document_key, annotation_keys_by_tag in key_table.items():
+        tag_dict = {tag: [] for tag in unique_tags}
+        document_item = item_by_key(zotero, document_key)
+        _document_summary_dict = document_summary_dict(document_item, fields=document_fields)
+        for tag, annotation_keys in annotation_keys_by_tag.items():
+            for key in annotation_keys:
+                item = item_by_key(zotero, key)
+                tag_dict[tag].append(annotation_summary_text(item, fields=annotation_fields))
+        table.append({**_document_summary_dict, **tag_dict})
+    return table
+
+
+def tabulate_coding_summary_by_key(zotero, annotation_items):
+    all_unique_tags = items_unique_tags(annotation_items)
+    table = defaultdict(lambda: {tag: [] for tag in all_unique_tags})
+    for document_key, annotation_key in annotation_keys_by_document(zotero, annotation_items):
+        for tag in item_unique_tags(item_by_key(zotero, annotation_key)):
+            table[document_key][tag].append(annotation_key)
+    return table
+
+
+def tabulate_coding_summary_by_key_dataframe(zotero, annotation_items):
+    table = tabulate_coding_summary_by_key(zotero, annotation_items)
+    return pd.DataFrame.from_dict(table, orient="index")
+
+
+def _replace_df_nans(df, replacement):
+    return df.map(lambda x: replacement if pd.isnull(x) else x)
+
+
+def annotation_summary_text(item, fields):
+    return ", ".join(map(str, annotation_summary_dict(item, fields).values()))
+
+
+def annotation_summary_dict(item, fields):
+    filtered_item = _select_data_fields(item, fields)
+    if "tags" in fields:
+        filtered_item["tags"] = item_unique_tags(item)
+    return filtered_item
+
+
+def document_summary_dict(item, fields):
+    filtered_item = _select_data_fields(item, fields)
+    if "creatorSummary" in fields:
+        filtered_item["creatorSummary"] = item.get("meta", {}).get("creatorSummary", "")
+    return filtered_item
+
+
+def _select_data_fields(item: dict[str], fields: list[str]) -> dict[str]:
+    return {field: item["data"].get(field, "") for field in fields}
+
+
+def item_unique_tags(item):
+    return set([t["tag"] for t in item["data"]["tags"]])
+
+
+def items_unique_tags(items):
+    return set([t["tag"] for item in items for t in item["data"]["tags"]])
+
+
+@cache
+def item_by_key(zotero, key):
+    query_result = zotero.items(itemKey=key)
+    if len(query_result) == 1:
+        return query_result[0]
+    else:
+        return {}
+
+
+def annotation_keys_by_document(zotero, annotation_items) -> list[(str, str)]:
+    return [(item_root(zotero, item)["key"], item["key"]) for item in annotation_items]
+
+
+def group_annotation_keys_by_document(zotero, annotation_items) -> dict["str", "str"]:
+    result = defaultdict(lambda: [])
+    for item in annotation_items:
+        result[item_root(zotero, item)["key"]].append(item["key"])
+    return result
+
+
+def keys_of(items):
+    return [i["key"] for i in items]
+
+
+def item_root(zotero, item):
     if has_parent(item):
-        return root_item(zotero, item_parent(zotero, item))
+        return item_root(zotero, item_parent(zotero, item))
     else:
         return item
 
@@ -57,24 +176,13 @@ def item_parent(zotero, item):
     return item_by_key(zotero, item["data"]["parentItem"])
 
 
-def memoize(func):
-    cache = dict()
-
-    def memoized_func(*args):
-        if args in cache:
-            return cache[args]
-        result = func(*args)
-        cache[args] = result
-        return result
-
-    return memoized_func
+def all_annotations(zotero):
+    return zotero.everything(zotero.items(itemType="annotation"))
 
 
-@memoize
-def item_by_key(zotero, key):
-    return zotero.items(itemKey=key)
-
-
-# if __name__ == "__main__":
-#     zotero = zotero_connect(api_key, library_id, library_type)
-#     annotations = all_annotations(zotero)
+def all_highlights(zotero):
+    return [
+        a
+        for a in all_annotations(zotero)
+        if a.get("data", {}).get("annotationType", None) == "highlight"
+    ]

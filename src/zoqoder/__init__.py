@@ -15,4 +15,22 @@ except PackageNotFoundError:  # pragma: no cover
 finally:
     del version, PackageNotFoundError
 
-from zoqoder.zoqoder import zotero_connect, all_annotations, item_parent, has_parent, root_item, item_by_key
+from zoqoder.zoqoder import (
+    zotero_connect,
+    tabulate_coding_summary,
+    tabulate_coding_summary_dataframe,
+    tabulate_coding_summary_by_key,
+    tabulate_coding_summary_by_key_dataframe,
+    annotation_keys_by_document,
+    group_annotation_keys_by_document,
+    all_annotations,
+    all_highlights,
+    item_parent,
+    has_parent,
+    item_root,
+    item_by_key,
+    item_unique_tags,
+    items_unique_tags,
+    # annotation_data_filtered,
+    # root_item_data_filtered
+)
