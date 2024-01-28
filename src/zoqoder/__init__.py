@@ -24,13 +24,14 @@ from zoqoder.zoqoder import (
     annotation_keys_by_document,
     group_annotation_keys_by_document,
     all_annotations,
-    all_highlights,
+    selected_annotations,
     item_parent,
     has_parent,
     item_root,
     item_by_key,
     item_unique_tags,
     items_unique_tags,
+    is_highlight
     # annotation_data_filtered,
     # root_item_data_filtered
 )

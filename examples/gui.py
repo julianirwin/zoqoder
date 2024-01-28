@@ -76,42 +76,6 @@ def _document_fields():
     return fields
 
 
-
-with ui.row().classes("w-full"):
-    with ui.row().classes("w-3/4 flex mx-auto"):
-        switch_dark_mode = ui.switch("Dark Mode")
-        ui.dark_mode().bind_value_from(switch_dark_mode)
-    with ui.row().classes("w-3/4 flex mx-auto"):
-        ui.label("Zoqoder GUI").classes("text-4xl font-bold")
-    with ui.row().classes("w-3/4 mx-auto"):
-        with ui.card():
-            ui.label("Setup").classes("text-xl font-bold")
-            api_key_input = ui.input("API Key", value=str(api_key))
-            library_id_input = ui.input("Library ID", value=library_id)
-            library_type_input = ui.select(options=["user", "group"], value="group")
-
-            ui.button("Connect", on_click=connect)
-            label_connected = ui.label("")
-
-            ui.button("Load Highlights", on_click=load_highlights)
-            label_num_highlights = ui.label("")
-
-        with ui.card():
-            ui.label("Annotaiton Fields").classes("text-xl font-bold")
-            cb_annotation_key = ui.checkbox("Key", value=True)
-            cb_text = ui.checkbox("Text", value=True)
-            cb_comment = ui.checkbox("Comment", value=False)
-            cb_color = ui.checkbox("Color", value=False)
-            cb_tags = ui.checkbox("Tags", value=False)
-
-        with ui.card():
-            ui.label("Document Fields").classes("text-xl font-bold")
-            cb_doc_key = ui.checkbox("Key", value=False)
-            cb_date = ui.checkbox("Date", value=True)
-            cb_creator = ui.checkbox("Creator Summary", value=True)
-            cb_title = ui.checkbox("Title", value=False)
-            cb_publication = ui.checkbox("Publication", value=False)
-
 def generate_summary():
     table_header = """
     <table class="table-auto">
@@ -131,7 +95,7 @@ def generate_summary():
         all_annotations, 
         document_fields=doc_fields, 
         annotation_fields=annot_fields)
-    raw_output.set_text(str(summary))
+    # raw_output.set_text(str(summary))
     columns = [*doc_fields, *unique_tags]
     headers = "\n".join(map(_surround_th, columns))
     table_rows = """
@@ -157,6 +121,43 @@ def _surround_td(s):
     return f'<td class="border">{s}</td>' 
 
 
+
+
+with ui.row().classes("w-full"):
+    with ui.row().classes("w-3/4 flex mx-auto"):
+        switch_dark_mode = ui.switch("Dark Mode", value=True)
+        ui.dark_mode().bind_value_from(switch_dark_mode)
+    with ui.row().classes("w-3/4 flex mx-auto"):
+        ui.label("Zoqoder GUI").classes("text-4xl font-bold")
+    with ui.row().classes("w-3/4 mx-auto"):
+        with ui.card():
+            ui.label("Setup").classes("text-xl font-bold")
+            api_key_input = ui.input("API Key", value=str(api_key))
+            library_id_input = ui.input("Library ID", value=library_id)
+            library_type_input = ui.select(options=["user", "group"], value="group")
+
+            ui.button("Connect", on_click=connect)
+            label_connected = ui.label("")
+
+            ui.button("Load Highlights", on_click=load_highlights)
+            label_num_highlights = ui.label("")
+
+        with ui.card():
+            ui.label("Annotation Fields").classes("text-xl font-bold")
+            cb_annotation_key = ui.checkbox("Key", value=False)
+            cb_text = ui.checkbox("Text", value=True)
+            cb_comment = ui.checkbox("Comment", value=False)
+            cb_color = ui.checkbox("Color", value=False)
+            cb_tags = ui.checkbox("Tags", value=False)
+
+        with ui.card():
+            ui.label("Document Fields").classes("text-xl font-bold")
+            cb_doc_key = ui.checkbox("Key", value=False)
+            cb_date = ui.checkbox("Date", value=True)
+            cb_creator = ui.checkbox("Creator Summary", value=True)
+            cb_title = ui.checkbox("Title", value=True)
+            cb_publication = ui.checkbox("Publication", value=False)
+
 with ui.row().classes("w-full"):
     with ui.row().classes("w-3/4 mx-auto"):
         with ui.column():
@@ -165,6 +166,5 @@ with ui.row().classes("w-full"):
             raw_output = ui.label("")
     with ui.row().classes("w-3/4 mx-auto pb-16"):
         html_output = ui.html("")
-    
 
 ui.run()

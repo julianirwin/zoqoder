@@ -176,13 +176,43 @@ def item_parent(zotero, item):
     return item_by_key(zotero, item["data"]["parentItem"])
 
 
+@cache
 def all_annotations(zotero):
     return zotero.everything(zotero.items(itemType="annotation"))
 
 
-def all_highlights(zotero):
-    return [
-        a
-        for a in all_annotations(zotero)
-        if a.get("data", {}).get("annotationType", None) == "highlight"
-    ]
+def selected_annotations(zotero, tags=[], collections=[], highlights_only=False):
+    _annotations = all_annotations(zotero)
+    collection_keys = [collection_key(zotero, collection) for collection in collections]
+    def filter_function(item):
+        _is_highlight = is_highlight(item)
+        _is_tagged = True
+        _is_in_collection = True
+        if tags or collections:
+            _is_tagged = any([has_tag(item_root(zotero, item), tag) for tag in tags])
+            _is_in_collection = any([in_collection(zotero, item, key) for key in collection_keys])
+        if highlights_only: 
+            return _is_highlight and (_is_tagged or _is_in_collection)
+        else:
+            return _is_tagged or (_is_tagged or _is_in_collection)
+    return list(filter(filter_function, _annotations))
+
+
+def is_highlight(annotation):
+    return annotation.get("data", {}).get("annotationType", None) == "highlight"
+
+
+def collection_key(zotero, collection_name):
+    collections = zotero.collections()
+    for collection in collections:
+        if collection["data"]["name"] == collection_name:
+            return collection["key"]
+    raise ValueError(f"Collection {collection_name} not found.")
+
+
+def in_collection(zotero, item, collection_key):
+    return collection_key in item_root(zotero, item)["data"]["collections"]
+
+
+def has_tag(item, tag):
+    return tag in item_unique_tags(item)
