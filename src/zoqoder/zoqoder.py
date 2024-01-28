@@ -186,15 +186,16 @@ def selected_annotations(zotero, tags=[], collections=[], highlights_only=False)
     collection_keys = [collection_key(zotero, collection) for collection in collections]
     def filter_function(item):
         _is_highlight = is_highlight(item)
-        _is_tagged = True
-        _is_in_collection = True
-        if tags or collections:
+        _is_tagged = False
+        _is_in_collection = False
+        if tags:
             _is_tagged = any([has_tag(item_root(zotero, item), tag) for tag in tags])
+        if collections:
             _is_in_collection = any([in_collection(zotero, item, key) for key in collection_keys])
         if highlights_only: 
             return _is_highlight and (_is_tagged or _is_in_collection)
         else:
-            return _is_tagged or (_is_tagged or _is_in_collection)
+            return _is_tagged or _is_in_collection
     return list(filter(filter_function, _annotations))
 
 
