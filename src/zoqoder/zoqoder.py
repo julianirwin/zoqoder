@@ -161,7 +161,22 @@ def keys_of(items):
     return [i["key"] for i in items]
 
 
+def item_ancestry(zotero, item):
+    if has_parent(item):
+        parent = item_parent(zotero, item)
+        if not is_valid_item(parent):
+            _logger.error(f'Parent {item["data"]["parentItem"]} of item {item["key"]} invalid.')
+            return [item, None]
+        else:
+            return [item] + item_ancestry(zotero, parent)
+    else:
+        return [item]
+
+
 def item_root(zotero, item):
+    return _item_root(zotero, item)
+
+def _item_root(zotero, item):
     _logger.debug(f"item_root() {item['key']}")
     if has_parent(item):
         parent = item_parent(zotero, item)
@@ -169,7 +184,7 @@ def item_root(zotero, item):
             _logger.error(f'Parent {item["data"]["parentItem"]} of item {item["key"]} invalid.')
             return item
         else:
-            return item_root(zotero, parent)
+            return _item_root(zotero, parent)
     else:
         return item
 
@@ -201,7 +216,8 @@ def selected_annotations(zotero, tags=[], collections=[], highlights_only=False,
         _is_tagged = False
         _is_in_collection = False
         if tags:
-            _is_tagged = any([has_tag(item_root(zotero, item), tag) for tag in tags])
+            root = item_root(zotero, item)
+            _is_tagged = any([has_tag(root, tag) for tag in tags])
         if collections:
             _is_in_collection = any([in_collection(zotero, item, key) for key in collection_keys])
         if highlights_only: 
@@ -238,4 +254,5 @@ def item_summary(item):
         "itemType": item.get("data", {}).get("itemType", "NONE"),
         "parentItem": item.get("data", {}).get("parentItem", "NONE"),
         "tags": item.get("data", {}).get("tags", "NONE"),
+        "filename": item.get("data", {}).get("filename", "NONE"),
     }
