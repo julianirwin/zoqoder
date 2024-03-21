@@ -162,10 +162,19 @@ def keys_of(items):
 
 
 def item_root(zotero, item):
+    _logger.debug(f"item_root() {item['key']}")
     if has_parent(item):
-        return item_root(zotero, item_parent(zotero, item))
+        parent = item_parent(zotero, item)
+        if not is_valid_item(parent):
+            _logger.error(f'Parent {item["data"]["parentItem"]} of item {item["key"]} invalid.')
+            return item
+        else:
+            return item_root(zotero, parent)
     else:
         return item
+
+def is_valid_item(item):
+    return "key" in item.keys()
 
 
 def has_parent(item):
@@ -181,8 +190,11 @@ def all_annotations(zotero):
     return zotero.everything(zotero.items(itemType="annotation"))
 
 
-def selected_annotations(zotero, tags=[], collections=[], highlights_only=False):
-    _annotations = all_annotations(zotero)
+def selected_annotations(zotero, tags=[], collections=[], highlights_only=False, all_annotations_cached=None):
+    _logger.info("Filtering through annotations...")
+    _annotations = all_annotations_cached
+    if _annotations is None:
+        _annotations = all_annotations(zotero)
     collection_keys = [collection_key(zotero, collection) for collection in collections]
     def filter_function(item):
         _is_highlight = is_highlight(item)
@@ -196,7 +208,9 @@ def selected_annotations(zotero, tags=[], collections=[], highlights_only=False)
             return _is_highlight and (_is_tagged or _is_in_collection)
         else:
             return _is_tagged or _is_in_collection
-    return list(filter(filter_function, _annotations))
+    res = list(filter(filter_function, _annotations))
+    _logger.info("Found %d annotations.", len(res))
+    return res
 
 
 def is_highlight(annotation):
@@ -217,3 +231,11 @@ def in_collection(zotero, item, collection_key):
 
 def has_tag(item, tag):
     return tag in item_unique_tags(item)
+
+def item_summary(item):
+    return {
+        "key": item.get("key", "NONE"),
+        "itemType": item.get("data", {}).get("itemType", "NONE"),
+        "parentItem": item.get("data", {}).get("parentItem", "NONE"),
+        "tags": item.get("data", {}).get("tags", "NONE"),
+    }
